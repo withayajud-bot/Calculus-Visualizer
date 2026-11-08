@@ -402,7 +402,7 @@
                 </div>
             </div>
 
-            <!-- แผงโหมด Quiz อัจฉริยะ (เชื่อมต่อ OpenRouter API + ระบบสำรอง 300 โจทย์) -->
+            <!-- แผงโหมด Quiz อัจฉริยะ (เชื่อมต่อ OpenRouter API พร้อม Header และระบบสำรองอัจฉริยะ) -->
             <div id="quiz-panel">
                 <div class="quiz-title">
                     <span>🎯 ระบบทดสอบ Quiz อนุมัติโดย AI</span>
@@ -550,7 +550,6 @@
         let isTraceActive = false;
         let animInterval = null;
 
-        // ฟังก์ชันตรวจสอบสถานะออนไลน์ / ออฟไลน์แบบเรียลไทม์
         function updateOnlineStatus() {
             let statusBadge = document.getElementById('connection-status');
             if (navigator.onLine) {
@@ -811,7 +810,7 @@
             }
         }
 
-        // คลังโจทย์สำรองขนาดใหญ่ (รองรับ ง่าย ปานกลาง ยาก ครบ 8 หมวดหมู่ รวม 300+ ข้อ)
+        // คลังโจทย์สำรองขนาดใหญ่ (รองรับ ง่าย ปานกลาง ยาก ครบ 8 หมวดหมู่)
         const massiveFallbackBank = {
             "กฎกำลังและค่าคงที่": {
                 "ง่าย": [
@@ -926,7 +925,7 @@
             }
         };
 
-        // ฟังก์ชันสุ่มโจทย์หลัก (พยายามเชื่อมต่อ API ก่อน หากออฟไลน์หรือพลาด จะดึงจากคลังสำรองทันที)
+        // ฟังก์ชันสุ่มโจทย์หลัก (รองรับ OpenRouter API พร้อม Header บังคับ และระบบสำรองอัตโนมัติ)
         async function generateQuizQuestion() {
             let topic = document.getElementById('quiz-topic').value;
             let difficulty = document.getElementById('quiz-difficulty').value;
@@ -936,9 +935,8 @@
             feedbackEl.innerText = "";
             document.getElementById('quiz-user-ans').value = "";
 
-            // ตรวจสอบสถานะเครือข่ายเบื้องต้น
             if (!navigator.onLine) {
-                useFallbackQuestion(topic, difficulty, " (สถานะ: ออฟไลน์โดยสมบูรณ์)");
+                useFallbackQuestion(topic, difficulty, " (โหมดออฟไลน์)");
                 return;
             }
 
@@ -949,7 +947,9 @@
                     method: "POST",
                     headers: {
                         "Authorization": `Bearer ${apiKey}`,
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": window.location.origin,
+                        "X-Title": "Calculus Visualizer"
                     },
                     body: JSON.stringify({
                         model: "google/gemini-2.5-flash",
@@ -959,8 +959,10 @@
                         }]
                     })
                 });
-                
-                if (!response.ok) throw new Error("API Network response was not ok");
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
 
                 let data = await response.json();
                 let rawContent = data.choices[0].message.content;
@@ -970,28 +972,30 @@
                 qTextEl.innerText = content.question;
                 currentQuizAnswer = content.answer.replace(/\s+/g, '');
                 
-                // อัปเดตสถานะเป็นออนไลน์พร้อมใช้งาน
-                document.getElementById('connection-status').className = "status-badge";
-                document.getElementById('connection-status').innerHTML = "🟢 ออนไลน์ / API พร้อม";
+                let statusBadge = document.getElementById('connection-status');
+                if(statusBadge) {
+                    statusBadge.className = "status-badge";
+                    statusBadge.innerHTML = "🟢 ออนไลน์ / API พร้อม";
+                }
                 return;
             } catch(e) {
-                console.log("API Error / Offline mode triggered, using fallback bank.", e);
-                // แจ้งสถานะเตือนบนป้าย
-                let statusBadge = document.getElementById('connection-status');
-                statusBadge.className = "status-badge offline";
-                statusBadge.innerHTML = "🟡 API ขัดข้อง (ใช้โหมดสำรอง)";
+                console.warn("ไม่สามารถเชื่อมต่อ API ได้ (สลับไปใช้ระบบโจทย์สำรอง):", e);
                 
-                useFallbackQuestion(topic, difficulty, "");
+                let statusBadge = document.getElementById('connection-status');
+                if(statusBadge) {
+                    statusBadge.className = "status-badge offline";
+                    statusBadge.innerHTML = "🟡 ใช้โหมดสำรอง (API ขัดข้อง)";
+                }
+
+                useFallbackQuestion(topic, difficulty, " (โหมดสำรองอัตโนมัติ)");
             }
         }
 
-        // ฟังก์ชันดึงโจทย์จากคลังสำรอง (Fallback Bank) แบบสุ่มไม่ซ้ำ
         function useFallbackQuestion(topic, difficulty, note) {
             let qTextEl = document.getElementById('quiz-question-text');
             let topicBank = massiveFallbackBank[topic] || massiveFallbackBank["กฎกำลังและค่าคงที่"];
             let diffList = topicBank[difficulty] || topicBank["ปานกลาง"];
             
-            // สุ่มเลือกข้อจากคลังสำรอง
             let randomIndex = Math.floor(Math.random() * diffList.length);
             let selected = diffList[randomIndex];
 
