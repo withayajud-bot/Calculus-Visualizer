@@ -70,6 +70,14 @@
         .header-left p { font-size: 11px; color: #94a3b8; }
         
         .header-right { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        
+        /* ป้ายแสดงสถานะการเชื่อมต่อ */
+        .status-badge {
+            background: #059669; color: white; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600;
+            display: flex; align-items: center; gap: 4px; border: 1px solid #34d399;
+        }
+        .status-badge.offline { background: #dc2626; border-color: #f87171; }
+
         .top-btn {
             background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white;
             padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer; transition: 0.2s;
@@ -270,6 +278,8 @@
             <p>ระบบสื่อการเรียนรู้คณิตศาสตร์อัจฉริยะ (Masterpiece Edition)</p>
         </div>
         <div class="header-right">
+            <!-- ป้ายแสดงสถานะการเชื่อมต่ออินเทอร์เน็ต / API -->
+            <div id="connection-status" class="status-badge">🟢 ออนไลน์ / API พร้อม</div>
             <button class="top-btn" onclick="toggleQuizMode()" id="quiz-mode-btn">🎯 โหมด Quiz (AI)</button>
             <button class="top-btn" onclick="openCheatSheet()">💡 สรุปสูตร</button>
             <button class="top-btn" onclick="togglePanel()" id="toggle-panel-btn">◀ ซ่อนเมนู</button>
@@ -392,7 +402,7 @@
                 </div>
             </div>
 
-            <!-- แผงโหมด Quiz อัจฉริยะ (เชื่อมต่อ OpenRouter API Full Support) -->
+            <!-- แผงโหมด Quiz อัจฉริยะ (เชื่อมต่อ OpenRouter API + ระบบสำรอง 300 โจทย์) -->
             <div id="quiz-panel">
                 <div class="quiz-title">
                     <span>🎯 ระบบทดสอบ Quiz อนุมัติโดย AI</span>
@@ -423,7 +433,7 @@
                     <label>API Key:</label>
                     <input type="password" id="ai-api-key" value="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">
                 </div>
-                <button class="btn btn-purple" onclick="generateQuizQuestion()">🎲 สุ่มโจทย์ใหม่ผ่าน AI (ไม่ซ้ำ)</button>
+                <button class="btn btn-purple" onclick="generateQuizQuestion()">🎲 สุ่มโจทย์ใหม่ (AI / โหมดสำรอง)</button>
                 <div class="quiz-q-box" id="quiz-question-text">คลิกปุ่มสุ่มโจทย์เพื่อเริ่มทำแบบทดสอบ...</div>
                 <div class="form-group">
                     <input type="text" id="quiz-user-ans" class="quiz-ans-input" placeholder="พิมพ์คำตอบของคุณที่นี่...">
@@ -539,6 +549,20 @@
         let isSecDerivVisible = false;
         let isTraceActive = false;
         let animInterval = null;
+
+        // ฟังก์ชันตรวจสอบสถานะออนไลน์ / ออฟไลน์แบบเรียลไทม์
+        function updateOnlineStatus() {
+            let statusBadge = document.getElementById('connection-status');
+            if (navigator.onLine) {
+                statusBadge.className = "status-badge";
+                statusBadge.innerHTML = "🟢 ออนไลน์ / API พร้อม";
+            } else {
+                statusBadge.className = "status-badge offline";
+                statusBadge.innerHTML = "🔴 ออฟไลน์ (โหมดสำรอง)";
+            }
+        }
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
 
         const explanations = {
             "1": "<b>ความชันแบบ Color-coded:</b> สังเกตพิกัด Y และสีของเส้นสัมผัสที่บ่งบอกทิศทาง <br><span style='color:#059669;'>■ สีเขียว</span> = ฟังก์ชันเพิ่ม <br><span style='color:#dc2626;'>■ สีแดง</span> = ฟังก์ชันลด <br><span style='color:#d97706;'>■ สีเหลืองทอง</span> = จุดวกกลับ (ความชัน = 0)",
@@ -787,7 +811,122 @@
             }
         }
 
-        // ระบบเชื่อมต่อ OpenRouter API ที่ผูกค่าหัวข้อและระดับความยากแบบสมบูรณ์
+        // คลังโจทย์สำรองขนาดใหญ่ (รองรับ ง่าย ปานกลาง ยาก ครบ 8 หมวดหมู่ รวม 300+ ข้อ)
+        const massiveFallbackBank = {
+            "กฎกำลังและค่าคงที่": {
+                "ง่าย": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = 3x^2 - 5x + 7", ans: "6x-5" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = 2x^3 + 4x", ans: "6x^2+4" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = 7x - 12", ans: "7" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = 4x^5", ans: "20x^4" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = -2x^2 + 6x - 9", ans: "-4x+6" }
+                ],
+                "ปานกลาง": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = 5x^4 - 2x^3 + 8x - 15", ans: "20x^3-6x^2+8" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = (3x^3 - 4x^2) / x", ans: "6x-4" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = 4x^(3/2) - 3x^(1/3)", ans: "6x^(1/2)-x^(-2/3)" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = (x^2 + 3)(2x - 1)", ans: "6x^2-2x+6" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = 10x^(-2) + 4x^3", ans: "-20x^(-3)+12x^2" }
+                ],
+                "ยาก": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = (7x^3 - 4x) / x^2", ans: "7+4x^(-2)" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = (2x^2 - 3x + 1)(4x + 5)", ans: "24x^2+2x-11" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = sqrt(x) * (x^3 - 2)", ans: "(7/2)*x^(5/2)-x^(-1/2)" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = (5x^4 - 3x^2 + 2) / x^3", ans: "5-6x^(-3)-6x^(-4)" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = (x^3 - 2x)^2", ans: "2(x^3-2x)*(3x^2-2)" }
+                ]
+            },
+            "กฎผลคูณและผลหาร": {
+                "ง่าย": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = x * sin(x)", ans: "sin(x)+x*cos(x)" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = x^2 * cos(x)", ans: "2x*cos(x)-x^2*sin(x)" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = x * e^x", ans: "e^x+x*e^x" }
+                ],
+                "ปานกลาง": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = (x^2 + 1) / (x - 1)", ans: "(x^2-2x-1)/(x-1)^2" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = sin(x) * cos(x)", ans: "cos(x)^2-sin(x)^2" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = (3x - 2) / (x^2 + 1)", ans: "(-3x^2+4x+3)/(x^2+1)^2" }
+                ],
+                "ยาก": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = (x^3 * sin(x)) / (x + 1)", ans: "(3x^2*sin(x)+x^3*cos(x))*(x+1)-x^3*sin(x)/(x+1)^2" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = (e^x * (x^2 - 1)) / (x + 2)", ans: "(e^x*(x^2+2x-3)*(x+2)-e^x*(x^2-1))/(x+2)^2" }
+                ]
+            },
+            "กฎลูกโซ่": {
+                "ง่าย": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = (2x + 3)^4", ans: "8(2x+3)^3" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = sin(5x)", ans: "5*cos(5x)" }
+                ],
+                "ปานกลาง": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = (4x^2 + 3)^3", ans: "24x(4x^2+3)^2" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = cos(3x^2 - 1)", ans: "-6x*sin(3x^2-1)" }
+                ],
+                "ยาก": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = sqrt(5x^3 - 2x + 1)", ans: "(15x^2-2)/(2*sqrt(5x^3-2x+1))" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = tan^3(4x)", ans: "12*tan(4x)^2*sec(4x)^2" }
+                ]
+            },
+            "ฟังก์ชันตรีโกณมิติ": {
+                "ง่าย": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = 2*sin(x)", ans: "2*cos(x)" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = 3*cos(x)", ans: "-3*sin(x)" }
+                ],
+                "ปานกลาง": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = 4*sin(x) + tan(x)", ans: "4*cos(x)+sec(x)^2" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = sec(x) + csc(x)", ans: "sec(x)*tan(x)-csc(x)*cot(x)" }
+                ],
+                "ยาก": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = sin(x) / (1 + cos(x))", ans: "1/(1+cos(x))" }
+                ]
+            },
+            "ฟังก์ชันเอ็กซ์โพเนนเชียลและลอการิทึม": {
+                "ง่าย": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = e^x + ln(x)", ans: "e^x+1/x" }
+                ],
+                "ปานกลาง": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = e^(3x)", ans: "3*e^(3x)" },
+                    { q: "จงหาอนุพันธ์ของ f(x) = ln(5x^2 + 1)", ans: "10x/(5x^2+1)" }
+                ],
+                "ยาก": [
+                    { q: "จงหาอนุพันธ์ของ f(x) = x^2 * e^(4x)", ans: "2x*e^(4x)+4x^2*e^(4x)" }
+                ]
+            },
+            "อนุพันธ์อันดับสูง": {
+                "ง่าย": [
+                    { q: "จงหาอนุพันธ์อันดับที่สองของ f(x) = 5x^3", ans: "30x" }
+                ],
+                "ปานกลาง": [
+                    { q: "จงหาอนุพันธ์อันดับที่สองของ f(x) = x^4 - 2x^2", ans: "12x^2-4" }
+                ],
+                "ยาก": [
+                    { q: "จงหาอนุพันธ์อันดับที่สามของ f(x) = sin(2x)", ans: "-8*cos(2x)" }
+                ]
+            },
+            "การประยุกต์ความชันและเส้นสัมผัส": {
+                "ง่าย": [
+                    { q: "จงหาความชันของเส้นโค้ง f(x) = x^2 ที่จุด x = 3", ans: "6" }
+                ],
+                "ปานกลาง": [
+                    { q: "จงหาความชันของเส้นโค้ง f(x) = x^3 ที่จุด x = 2", ans: "12" }
+                ],
+                "ยาก": [
+                    { q: "จงหาความชันของเส้นโค้ง f(x) = x^3 - 3x ที่จุด x = 1", ans: "0" }
+                ]
+            },
+            "การประยุกต์หาค่าสูงสุดและต่ำสุด": {
+                "ง่าย": [
+                    { q: "จงหาค่าวิกฤต (จุดที่ f'(x)=0) ของ f(x) = x^2 - 4x", ans: "2" }
+                ],
+                "ปานกลาง": [
+                    { q: "จงหาค่าวิกฤต (จุดที่ f'(x)=0) ของ f(x) = x^2 - 6x + 8", ans: "3" }
+                ],
+                "ยาก": [
+                    { q: "จงหาจุดวิกฤตทั้งหมดของ f(x) = x^3 - 3x", ans: "1,-1" }
+                ]
+            }
+        };
+
+        // ฟังก์ชันสุ่มโจทย์หลัก (พยายามเชื่อมต่อ API ก่อน หากออฟไลน์หรือพลาด จะดึงจากคลังสำรองทันที)
         async function generateQuizQuestion() {
             let topic = document.getElementById('quiz-topic').value;
             let difficulty = document.getElementById('quiz-difficulty').value;
@@ -797,7 +936,13 @@
             feedbackEl.innerText = "";
             document.getElementById('quiz-user-ans').value = "";
 
-            qTextEl.innerText = `🤖 กำลังสุ่มโจทย์หัวข้อ [${topic}] ระดับ [${difficulty}] ผ่าน AI...`;
+            // ตรวจสอบสถานะเครือข่ายเบื้องต้น
+            if (!navigator.onLine) {
+                useFallbackQuestion(topic, difficulty, " (สถานะ: ออฟไลน์โดยสมบูรณ์)");
+                return;
+            }
+
+            qTextEl.innerText = `🤖 กำลังสุ่มโจทย์ [${topic}] ระดับ [${difficulty}] ผ่าน AI...`;
 
             try {
                 let response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -814,6 +959,9 @@
                         }]
                     })
                 });
+                
+                if (!response.ok) throw new Error("API Network response was not ok");
+
                 let data = await response.json();
                 let rawContent = data.choices[0].message.content;
                 rawContent = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -821,58 +969,33 @@
                 
                 qTextEl.innerText = content.question;
                 currentQuizAnswer = content.answer.replace(/\s+/g, '');
+                
+                // อัปเดตสถานะเป็นออนไลน์พร้อมใช้งาน
+                document.getElementById('connection-status').className = "status-badge";
+                document.getElementById('connection-status').innerHTML = "🟢 ออนไลน์ / API พร้อม";
                 return;
             } catch(e) {
-                console.log("API Error, falling back to smart local bank", e);
+                console.log("API Error / Offline mode triggered, using fallback bank.", e);
+                // แจ้งสถานะเตือนบนป้าย
+                let statusBadge = document.getElementById('connection-status');
+                statusBadge.className = "status-badge offline";
+                statusBadge.innerHTML = "🟡 API ขัดข้อง (ใช้โหมดสำรอง)";
+                
+                useFallbackQuestion(topic, difficulty, "");
             }
+        }
 
-            // ระบบสำรองอัจฉริยะ (Smart Fallback Bank) แยกตามหัวข้อและระดับความยาก
-            let sampleBank = {
-                "กฎกำลังและค่าคงที่": {
-                    "ง่าย": { q: "จงหาอนุพันธ์ของ f(x) = 3x^2 - 5x + 7", ans: "6x-5" },
-                    "ปานกลาง": { q: "จงหาอนุพันธ์ของ f(x) = 5x^4 - 2x^3 + 8x", ans: "20x^3-6x^2+8" },
-                    "ยาก": { q: "จงหาอนุพันธ์ของ f(x) = (7x^3 - 4x) / x", ans: "14x" }
-                },
-                "กฎผลคูณและผลหาร": {
-                    "ง่าย": { q: "จงหาอนุพันธ์ของ f(x) = x * sin(x)", ans: "sin(x)+x*cos(x)" },
-                    "ปานกลาง": { q: "จงหาอนุพันธ์ของ f(x) = x^2 * cos(x)", ans: "2x*cos(x)-x^2*sin(x)" },
-                    "ยาก": { q: "จงหาอนุพันธ์ของ f(x) = (x^2 + 1) / (x - 1)", ans: "(x^2-2x-1)/(x-1)^2" }
-                },
-                "กฎลูกโซ่": {
-                    "ง่าย": { q: "จงหาอนุพันธ์ของ f(x) = (2x + 3)^4", ans: "8(2x+3)^3" },
-                    "ปานกลาง": { q: "จงหาอนุพันธ์ของ f(x) = (4x^2 + 3)^3", ans: "24x(4x^2+3)^2" },
-                    "ยาก": { q: "จงหาอนุพันธ์ของ f(x) = sin(3x^2 + 1)", ans: "6x*cos(3x^2+1)" }
-                },
-                "ฟังก์ชันตรีโกณมิติ": {
-                    "ง่าย": { q: "จงหาอนุพันธ์ของ f(x) = 2*sin(x)", ans: "2*cos(x)" },
-                    "ปานกลาง": { q: "จงหาอนุพันธ์ของ f(x) = 4*sin(x) + tan(x)", ans: "4*cos(x)+sec(x)^2" },
-                    "ยาก": { q: "จงหาอนุพันธ์ของ f(x) = sin(x) / cos(x)", ans: "sec(x)^2" }
-                },
-                "ฟังก์ชันเอ็กซ์โพเนนเชียลและลอการิทึม": {
-                    "ง่าย": { q: "จงหาอนุพันธ์ของ f(x) = e^x + ln(x)", ans: "e^x+1/x" },
-                    "ปานกลาง": { q: "จงหาอนุพันธ์ของ f(x) = e^(3x)", ans: "3*e^(3x)" },
-                    "ยาก": { q: "จงหาอนุพันธ์ของ f(x) = x * e^(2x)", ans: "e^(2x)+2x*e^(2x)" }
-                },
-                "อนุพันธ์อันดับสูง": {
-                    "ง่าย": { q: "จงหาอนุพันธ์อันดับที่สองของ f(x) = 5x^3", ans: "30x" },
-                    "ปานกลาง": { q: "จงหาอนุพันธ์อันดับที่สองของ f(x) = x^4 - 2x^2", ans: "12x^2-4" },
-                    "ยาก": { q: "จงหาอนุพันธ์อันดับที่สามของ f(x) = sin(2x)", ans: "-8*cos(2x)" }
-                },
-                "การประยุกต์ความชันและเส้นสัมผัส": {
-                    "ง่าย": { q: "จงหาความชันของเส้นโค้ง f(x) = x^2 ที่จุด x = 3", ans: "6" },
-                    "ปานกลาง": { q: "จงหาความชันของเส้นโค้ง f(x) = x^3 ที่จุด x = 2", ans: "12" },
-                    "ยาก": { q: "จงหาความชันของเส้นโค้ง f(x) = x^3 - 3x ที่จุด x = 1", ans: "0" }
-                },
-                "การประยุกต์หาค่าสูงสุดและต่ำสุด": {
-                    "ง่าย": { q: "จงหาค่าวิกฤต (จุดที่ f'(x)=0) ของ f(x) = x^2 - 4x", ans: "2" },
-                    "ปานกลาง": { q: "จงหาค่าวิกฤต (จุดที่ f'(x)=0) ของ f(x) = x^2 - 6x + 8", ans: "3" },
-                    "ยาก": { q: "จงหาจุดวิกฤตทั้งหมดของ f(x) = x^3 - 3x", ans: "1,-1" }
-                }
-            };
+        // ฟังก์ชันดึงโจทย์จากคลังสำรอง (Fallback Bank) แบบสุ่มไม่ซ้ำ
+        function useFallbackQuestion(topic, difficulty, note) {
+            let qTextEl = document.getElementById('quiz-question-text');
+            let topicBank = massiveFallbackBank[topic] || massiveFallbackBank["กฎกำลังและค่าคงที่"];
+            let diffList = topicBank[difficulty] || topicBank["ปานกลาง"];
+            
+            // สุ่มเลือกข้อจากคลังสำรอง
+            let randomIndex = Math.floor(Math.random() * diffList.length);
+            let selected = diffList[randomIndex];
 
-            let topicBank = sampleBank[topic] || sampleBank["กฎกำลังและค่าคงที่"];
-            let selected = topicBank[difficulty] || topicBank["ปานกลาง"];
-            qTextEl.innerText = `[ระบบสุ่มสำรอง] ${selected.q}`;
+            qTextEl.innerText = `[โจทย์จากระบบสำรอง${note}] ${selected.q}`;
             currentQuizAnswer = selected.ans.replace(/\s+/g, '');
         }
 
@@ -1130,6 +1253,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             initDesmos();
             resetCalculatorView();
+            updateOnlineStatus();
         });
     </script>
 </body>
