@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Derivatives - เรียนรู้อนุพันธ์แบบเห็นภาพ</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.desmos.com/api/v1.9/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --panel-bg: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success: #059669;
+            --danger: #dc2626;
+            --warning: #d97706;
+            --text-dark: #0f172a;
+            --text-light: #475569;
+            --border: #cbd5e1;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --header-bg: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            --input-bg: #ffffff;
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text-dark: #f8fafc;
+            --text-light: #94a3b8;
+            --border: #334155;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            --header-bg: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+            --input-bg: #0f172a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Prompt', sans-serif; }
+
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-dark); 
+            padding: 10px; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+        }
+
+        .header { 
+            background: var(--header-bg); 
+            color: white; 
+            padding: 10px 16px; 
+            border-radius: 12px; 
+            margin-bottom: 10px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            box-shadow: var(--shadow); 
+            flex-shrink: 0; 
+        }
+        .header-left h1 { font-size: 16px; font-weight: 700; }
+        .header-left p { font-size: 11px; color: #94a3b8; }
+        
+        .header-right { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .top-btn {
+            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white;
+            padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .top-btn:hover { background: rgba(255,255,255,0.25); }
+        .top-btn.active { background: var(--success); border-color: #34d399; }
+
+        .main-container { 
+            display: grid; 
+            grid-template-columns: 390px 1fr; 
+            gap: 10px; 
+            flex-grow: 1; 
+            min-height: 0; 
+            overflow: hidden;
+        }
+        
+        .main-container.panel-collapsed { grid-template-columns: 0px 1fr; }
+        .main-container.panel-collapsed .control-panel { opacity: 0; pointer-events: none; padding: 0; overflow: hidden; border: none; }
+
+        .control-panel { 
+            background: var(--panel-bg); 
+            border-radius: 12px; 
+            padding: 12px; 
+            box-shadow: var(--shadow); 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            border: 1px solid var(--border);
+            max-height: calc(100vh - 75px);
+        }
+        
+        .form-group { display: flex; flex-direction: column; gap: 4px; position: relative;}
+        .form-group label { font-weight: 600; font-size: 11px; color: var(--text-dark); }
+        
+        input[type="text"], input[type="password"] { 
+            width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; 
+            font-size: 12px; font-family: 'Courier New', Courier, monospace; font-weight: 600; outline: none; 
+            background-color: var(--input-bg); color: var(--text-dark);
+        }
+        select {
+            width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; 
+            font-size: 11px; outline: none; background-color: var(--input-bg); color: var(--text-dark);
+        }
+        select:focus, input[type="text"]:focus, input[type="password"]:focus { border-color: var(--primary); }
+
+        .student-info-box {
+            background: var(--bg-color); border: 1px solid var(--border); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px;
+        }
+        .student-info-title { font-size: 11px; font-weight: 700; color: var(--primary); }
+        .student-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+        .quick-examples { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; align-items: center;}
+        .example-chip { 
+            background: var(--bg-color); border: 1px solid var(--border); color: var(--text-light); 
+            padding: 2px 6px; border-radius: 6px; font-size: 10px; cursor: pointer; font-weight: 500;
+        }
+        .example-chip:hover { border-color: var(--primary); color: var(--primary); }
+
+        .equation-display {
+            padding: 5px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; text-align: center;
+            background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;
+        }
+        body.dark-mode .equation-display { background-color: #0369a1; color: #e0f2fe; border-color: #0284c7; }
+
+        .limit-display {
+            display: none; background-color: #f3e8ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 6px; text-align: center;
+        }
+        body.dark-mode .limit-display { background-color: #581c87; border-color: #7e22ce; color: #f3e8ff; }
+        .limit-title { font-size: 10px; font-weight: 600; color: #7e22ce; margin-bottom: 2px; }
+        body.dark-mode .limit-title { color: #d8b4fe; }
+        .limit-formula { font-size: 12px; font-weight: 700; color: #6b21a8; font-family: 'Courier New', Courier, monospace;}
+        body.dark-mode .limit-formula { color: #f3e8ff; }
+
+        .slider-container { 
+            display: flex; flex-direction: column; gap: 4px; background: var(--bg-color); padding: 8px; border-radius: 6px; border: 1px solid var(--border); 
+        }
+        .slider-header { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--text-dark); }
+        .slider-value { background: var(--primary); color: white; padding: 1px 4px; border-radius: 4px; font-size: 10px; }
+        input[type="range"] { width: 100%; cursor: pointer; accent-color: var(--primary); }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+        .status-box { 
+            background: var(--panel-bg); padding: 6px; border-radius: 6px; text-align: center; border: 1px solid var(--border); 
+            display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden;
+        }
+        .status-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background-color: inherit; }
+        .status-title { font-size: 10px; color: var(--text-light); font-weight: 600; margin-bottom: 2px; } 
+        .status-value { font-size: 16px; font-weight: 700; line-height: 1; } 
+        .status-box-full { grid-column: span 2; }
+
+        .concavity-indicator {
+            grid-column: span 2; padding: 5px; border-radius: 6px; text-align: center; font-size: 11px; font-weight: 600; display: none; 
+        }
+        .concavity-up { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; } 
+        .concavity-down { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; } 
+        .concavity-zero { background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; } 
+
+        .gamification-box { display: none; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: 600; text-align: center; border: 1px solid transparent; }
+        .gamification-box.pending { background: #fffbeb; color: #b45309; border-color: #fcd34d; }
+        .gamification-box.success { background: #ecfdf5; color: #047857; border-color: #34d399; }
+
+        .explanation-box { background: var(--bg-color); border-left: 3px solid var(--primary); padding: 8px; border-radius: 0 6px 6px 0; font-size: 11px; line-height: 1.4; color: var(--text-dark); }
+
+        /* แผงโหมด Quiz */
+        #quiz-panel {
+            display: none; flex-direction: column; gap: 8px; background: var(--bg-color); border: 1px solid #9333ea; border-radius: 8px; padding: 10px;
+        }
+        .quiz-title { font-size: 12px; font-weight: 700; color: #7e22ce; display: flex; justify-content: space-between; align-items: center; }
+        .quiz-q-box { font-size: 11px; font-weight: 600; color: var(--text-dark); line-height: 1.4; background: var(--panel-bg); padding: 8px; border-radius: 6px; border: 1px solid var(--border); }
+        .quiz-ans-input { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 11px; }
+        .quiz-feedback { font-size: 11px; font-weight: 600; text-align: center; margin-top: 2px; }
+
+        .reflection-box {
+            background: var(--bg-color); border: 1px solid var(--border); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 4px;
+        }
+        .reflection-title { font-size: 11px; font-weight: 700; color: var(--primary); display: flex; justify-content: space-between; align-items: center; }
+        .reflection-textarea {
+            width: 100%; height: 40px; padding: 5px; border: 1px solid var(--border); border-radius: 6px; font-size: 11px; resize: none; background: var(--panel-bg); color: var(--text-dark); outline: none;
+        }
+        .export-btn {
+            background: var(--success); color: white; border: none; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; transition: 0.2s;
+        }
+        .export-btn:hover { background: #047857; }
+
+        .data-table-container { display: none; margin-top: 4px; background: var(--panel-bg); border-radius: 6px; border: 1px solid var(--border); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
+        th { background: var(--bg-color); padding: 4px; font-weight: 600; color: var(--text-dark); border-bottom: 1px solid var(--border); }
+        td { padding: 4px; border-bottom: 1px solid var(--border); color: var(--text-dark); font-family: 'Courier New', Courier, monospace;}
+
+        .btn-group { display: flex; gap: 4px; flex-wrap: wrap; }
+        .btn { 
+            flex: 1; min-width: 80px; padding: 6px; font-size: 11px; font-weight: 600; color: white; border: none; border-radius: 6px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 3px;
+        }
+        .btn-primary { background: var(--primary); }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-play { background: var(--success); }
+        .btn-play:hover { background: #059669; }
+        .btn-secondary { background: #64748b; } 
+        .btn-secondary:hover { background: #475569; }
+        .btn-purple { background: #9333ea; }
+        .btn-purple:hover { background: #7e22ce; }
+
+        .graph-panel { background: var(--panel-bg); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); position: relative; border: 1px solid var(--border); height: 100%; }
+        #calculator { width: 100%; height: 100%; }
+
+        /* แป้นพิมพ์คณิตศาสตร์แบบลอย */
+        #virtual-keypad {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 90%; max-width: 340px; background: var(--panel-bg); border-radius: 10px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); z-index: 1000; overflow: hidden; flex-direction: column;
+        }
+        .keypad-header { background: #1e293b; color: white; padding: 8px 10px; font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none; }
+        .keypad-close { background: none; border: none; color: white; font-size: 14px; cursor: pointer; }
+        .keypad-close:hover { color: #ef4444; }
+        .keypad-body { padding: 8px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: var(--bg-color); }
+        .key-btn { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 4px; padding: 6px 0; font-size: 12px; font-weight: 600; color: var(--text-dark); cursor: pointer; font-family: 'Courier New', Courier, monospace; }
+        .key-btn:hover { background: var(--border); }
+        .key-sci { background: var(--bg-color); color: var(--text-light); font-size: 11px; } 
+        .key-var { background: #eff6ff; color: #2563eb; font-size: 13px; font-weight: 700; } 
+        .key-func { background: #e0f2fe; color: #0284c7; } 
+        .key-op { background: #fef2f2; color: #dc2626; font-size: 13px; } 
+        .key-action { background: #10b981; color: white; grid-column: span 5; border: none; font-family: 'Prompt', sans-serif; padding: 6px;} 
+        .key-del { background: #fffbeb; color: #d97706; } 
+        .key-ac { background: #fef2f2; color: #dc2626; } 
+
+        /* Modal หน้าต่างสรุปสูตรลัด */
+        #cheat-sheet-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: var(--panel-bg); color: var(--text-dark); padding: 16px; border-radius: 10px; width: 90%; max-width: 420px; box-shadow: var(--shadow); border: 1px solid var(--border);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+        .modal-body { font-size: 11px; line-height: 1.5; }
+        .formula-item { margin-bottom: 5px; padding-bottom: 3px; border-bottom: 1px dashed var(--border); }
+        .formula-item:last-child { border-bottom: none; }
+        .formula-title { font-weight: 600; color: var(--primary); }
+        .formula-math { font-family: 'Courier New', Courier, monospace; background: var(--bg-color); padding: 2px 4px; border-radius: 4px; display: inline-block; margin-top: 2px; }
+
+        @media (max-width: 1024px) {
+            body { height: auto; overflow-y: auto; padding: 6px; }
+            .main-container { grid-template-columns: 1fr; height: auto; overflow: visible; }
+            .control-panel { max-height: none; }
+            .graph-panel { height: 40vh; min-height: 280px; }
+            .header { flex-direction: column; gap: 6px; text-align: center; padding: 8px; }
+            .header-right { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-left">
+            <h1>การสำรวจอนุพันธ์ (Derivatives Explorer)</h1>
+            <p>ระบบสื่อการเรียนรู้คณิตศาสตร์อัจฉริยะ (Masterpiece Edition)</p>
+        </div>
+        <div class="header-right">
+            <button class="top-btn" onclick="toggleQuizMode()" id="quiz-mode-btn">🎯 โหมด Quiz (AI)</button>
+            <button class="top-btn" onclick="openCheatSheet()">💡 สรุปสูตร</button>
+            <button class="top-btn" onclick="togglePanel()" id="toggle-panel-btn">◀ ซ่อนเมนู</button>
+            <button class="top-btn" onclick="toggleDarkMode()" id="dark-mode-btn">🌙 โหมดคืน</button>
+        </div>
+    </div>
+
+    <div class="main-container" id="main-layout">
+        <div class="control-panel">
+            <!-- ข้อมูลส่วนตัวนักเรียนสำหรับรายงาน -->
+            <div class="student-info-box">
+                <div class="student-info-title">👤 ข้อมูลผู้จัดทำ / ผู้ทำแบบทดสอบ</div>
+                <div class="student-row">
+                    <input type="text" id="std-name" placeholder="ชื่อ - นามสกุล">
+                    <input type="text" id="std-class-no" placeholder="ชั้น / เลขที่">
+                </div>
+            </div>
+
+            <!-- ส่วนควบคุมมาตรฐาน -->
+            <div id="standard-controls" style="display: flex; flex-direction: column; gap: 10px;">
+                <div class="form-group">
+                    <label>📚 เลือกหัวข้อการเรียนรู้:</label>
+                    <select id="topic-select" onchange="changeTopic()">
+                        <option value="1">1. ความชันของเส้นโค้งและเส้นสัมผัส (Color-coded)</option>
+                        <option value="2">2. นิยามอนุพันธ์จากลิมิต (Secant to Tangent)</option>
+                        <option value="3">3. อนุพันธ์ในฐานะอัตราการเปลี่ยนแปลง (ฟิสิกส์)</option>
+                        <option value="4">4. อนุพันธ์ของฟังก์ชันพื้นฐาน</option>
+                        <option value="5">5. การประยุกต์หาค่าสูงสุดและต่ำสุด</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="func-group">
+                    <label>ป้อนฟังก์ชัน f(x):</label>
+                    <input type="text" id="func-input" value="0.5x^3 - 2x" oninput="updateFunctionAndSave()" onclick="openKeypad()" placeholder="พิมพ์ วาง (Paste) หรือคลิกเครื่องมือ...">
+                    
+                    <div class="quick-examples">
+                        <span style="font-size: 10px; color: var(--text-light); font-weight: 500;">โจทย์:</span>
+                        <span class="example-chip" onclick="setFunction('sin(x^2)')">กฎลูกโซ่</span>
+                        <span class="example-chip" onclick="setFunction('x*sin(x)')">ผลคูณ</span>
+                        <span class="example-chip" onclick="setFunction('x/(x^2+1)')">ผลหาร</span>
+                        <span class="example-chip" onclick="setFunction('(x^3-1)^-6')">กำลังติดลบ</span>
+                    </div>
+
+                    <div id="deriv-eq-display" class="equation-display">คำนวณสมการ...</div>
+                    
+                    <div id="limit-display" class="limit-display">
+                        <div class="limit-title">อัตราการเปลี่ยนแปลงเฉลี่ย (ความชันเส้นตัดโค้ง)</div>
+                        <div id="limit-formula-text" class="limit-formula">กำลังคำนวณ...</div>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="status-box" style="border-top-color: #3b82f6;">
+                        <div class="status-title">พิกัด X (จุดพิจารณา)</div>
+                        <div class="status-value" id="disp-x" style="color: #3b82f6;">0.00</div>
+                    </div>
+                    <div class="status-box" style="border-top-color: #8b5cf6;">
+                        <div class="status-title">พิกัด Y หรือ f(x)</div>
+                        <div class="status-value" id="disp-y" style="color: #8b5cf6;">0.00</div>
+                    </div>
+                    <div class="status-box status-box-full" id="status-card">
+                        <div class="status-title" id="status-label">ค่าอนุพันธ์อันดับแรก f'(x) (ความชัน)</div>
+                        <div class="status-value" id="slope-value">0.00</div>
+                    </div>
+                    <div class="concavity-indicator" id="concavity-box">ตรวจสอบความเว้า...</div>
+                </div>
+
+                <div id="gamification-box" class="gamification-box pending">
+                    🎯 ภารกิจ: เลื่อนจุดเพื่อหาตำแหน่งที่ความชัน (f') เป็น 0 (จุดวกกลับ)
+                </div>
+
+                <div class="data-table-container" id="data-table-box">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>จุด X</th>
+                                <th>ค่าฟังก์ชัน f(x)</th>
+                                <th>ความชัน f'(x)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td id="tbl-x">0</td><td id="tbl-y">0</td><td id="tbl-dy">0</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="slider-container">
+                    <div class="slider-header">
+                        <span>เลื่อนพิกัด X</span>
+                    </div>
+                    <input type="range" id="slider-a" min="-3" max="3" step="0.05" value="1.5" oninput="updateSliders()">
+                </div>
+
+                <div class="slider-container" id="h-container" style="display: none;">
+                    <div class="slider-header">
+                        <span>ระยะห่าง h (ลิมิต h → 0)</span>
+                        <span class="slider-value" id="h-display" style="background:#8b5cf6;">2.00</span>
+                    </div>
+                    <input type="range" id="slider-h" min="0.01" max="3" step="0.01" value="2" oninput="updateSliders()">
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="toggleDerivGraph()">
+                        <span id="deriv-icon">📈</span> <span id="deriv-text">กราฟ f'(x)</span>
+                    </button>
+                    <button class="btn btn-secondary" id="btn-sec-deriv" onclick="toggleSecondDerivGraph()" style="display: none;">
+                        <span>📉</span> <span id="sec-deriv-text">กราฟ f''(x)</span>
+                    </button>
+                    <button class="btn btn-purple" id="trace-btn" onclick="toggleTraceMode()">
+                        ✨ ร่องรอย
+                    </button>
+                    <button class="btn btn-play" id="play-btn" onclick="toggleAnimation()">
+                        ▶ เล่น
+                    </button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                    <button class="btn btn-secondary" onclick="zoomInOnPoint()">🔍 ซูมจุดสนใจ</button>
+                    <button class="btn btn-secondary" onclick="resetCalculatorView()">🏠 หน้าแรก (Home)</button>
+                </div>
+            </div>
+
+            <!-- แผงโหมด Quiz อัจฉริยะ (เชื่อมต่อ OpenRouter API เต็มรูปแบบตามที่เลือก) -->
+            <div id="quiz-panel">
+                <div class="quiz-title">
+                    <span>🎯 ระบบทดสอบ Quiz อนุมัติโดย AI</span>
+                    <button class="export-btn" onclick="toggleQuizMode()">ปิด Quiz</button>
+                </div>
+                <div class="form-group">
+                    <label>เลือกหัวข้อทดสอบ (อนุพันธ์):</label>
+                    <select id="quiz-topic">
+                        <option value="กฎกำลังและค่าคงที่">1. กฎกำลังและค่าคงที่ (Power & Constant Rule)</option>
+                        <option value="กฎผลคูณและผลหาร">2. กฎผลคูณและผลหาร (Product & Quotient Rule)</option>
+                        <option value="กฎลูกโซ่">3. กฎลูกโซ่ (Chain Rule)</option>
+                        <option value="ฟังก์ชันตรีโกณมิติ">4. ฟังก์ชันตรีโกณมิติ (Trigonometric)</option>
+                        <option value="ฟังก์ชันเอ็กซ์โพเนนเชียลและลอการิทึม">5. ฟังก์ชันเอ็กซ์โพเนนเชียลและลอการิทึม</option>
+                        <option value="อนุพันธ์อันดับสูง">6. อนุพันธ์อันดับสูง (Higher-order)</option>
+                        <option value="การประยุกต์ความชันและเส้นสัมผัส">7. การประยุกต์ความชันและเส้นสัมผัส</option>
+                        <option value="การประยุกต์หาค่าสูงสุดและต่ำสุด">8. การประยุกต์หาค่าสูงสุด-ต่ำสุด (Optimization)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>เลือกระดับความยาก:</label>
+                    <select id="quiz-difficulty">
+                        <option value="ง่าย">ง่าย (Basic)</option>
+                        <option value="ปานกลาง" selected>ปานกลาง (Intermediate)</option>
+                        <option value="ยาก">ยาก (Advanced / Hard)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="display:none;">
+                    <label>API Key:</label>
+                    <input type="password" id="ai-api-key" value="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">
+                </div>
+                <button class="btn btn-purple" onclick="generateQuizQuestion()">🎲 สุ่มโจทย์ใหม่ผ่าน AI (ไม่ซ้ำ)</button>
+                <div class="quiz-q-box" id="quiz-question-text">คลิกปุ่มสุ่มโจทย์เพื่อเริ่มทำแบบทดสอบ...</div>
+                <div class="form-group">
+                    <input type="text" id="quiz-user-ans" class="quiz-ans-input" placeholder="พิมพ์คำตอบของคุณที่นี่...">
+                </div>
+                <button class="btn btn-primary" onclick="checkQuizAnswer()">✔️ ส่งคำตอบ</button>
+                <div class="quiz-feedback" id="quiz-feedback-text"></div>
+            </div>
+
+            <!-- กล่องบันทึกผลการทดลองและประวัติ Quiz พร้อมปุ่มดาวน์โหลดรายงาน -->
+            <div class="reflection-box">
+                <div class="reflection-title">
+                    <span>📝 บันทึกข้อสังเกตและประวัติ Quiz</span>
+                    <button class="export-btn" onclick="exportReflection()">📥 ดาวน์โหลดรายงาน</button>
+                </div>
+                <textarea id="student-note" class="reflection-textarea" placeholder="พิมพ์ข้อสังเกตหรือประวัติการทำ Quiz ของคุณที่นี่..."></textarea>
+            </div>
+
+            <div class="explanation-box" id="exp-box">
+                <b>แนวคิด:</b> เลื่อนพิกัด X หรือ <b>"ลากจุดสีดำบนเส้นกราฟ"</b> เพื่อดูการเปลี่ยนแปลงความชัน <br>
+                <span style="color:#059669; font-weight:600;">■ สีเขียว</span> = ฟังก์ชันเพิ่ม <br>
+                <span style="color:#dc2626; font-weight:600;">■ สีแดง</span> = ฟังก์ชันลด <br>
+                <span style="color:#d97706; font-weight:600;">■ สีเหลืองทอง</span> = จุดวกกลับ
+            </div>
+        </div>
+
+        <div class="graph-panel">
+            <div id="calculator"></div>
+        </div>
+    </div>
+
+    <!-- แป้นพิมพ์คณิตศาสตร์แบบลอย -->
+    <div id="virtual-keypad">
+        <div class="keypad-header" id="keypad-header">
+            <span>🧮 เครื่องมือคณิตศาสตร์ (ลากเพื่อย้าย)</span>
+            <button class="keypad-close" onclick="closeKeypad()">✖</button>
+        </div>
+        <div class="keypad-body">
+            <button class="key-btn key-sci" onclick="insertKey('sin(')">sin</button>
+            <button class="key-btn key-sci" onclick="insertKey('cos(')">cos</button>
+            <button class="key-btn key-sci" onclick="insertKey('tan(')">tan</button>
+            <button class="key-btn key-sci" onclick="insertKey('pi')">π</button>
+            <button class="key-btn key-sci" onclick="insertKey('e')">e</button>
+
+            <button class="key-btn key-sci" onclick="insertKey('sqrt(')">√</button>
+            <button class="key-btn key-sci" onclick="insertKey('^2')">x²</button>
+            <button class="key-btn key-sci" onclick="insertKey('^')">xⁿ</button>
+            <button class="key-btn key-sci" onclick="insertKey('abs(')">|x|</button>
+            <button class="key-btn key-del" onclick="deleteKey()">DEL</button>
+            
+            <button class="key-btn" onclick="insertKey('7')">7</button>
+            <button class="key-btn" onclick="insertKey('8')">8</button>
+            <button class="key-btn" onclick="insertKey('9')">9</button>
+            <button class="key-btn key-func" onclick="insertKey('(')">(</button>
+            <button class="key-btn key-func" onclick="insertKey(')')">)</button>
+            
+            <button class="key-btn" onclick="insertKey('4')">4</button>
+            <button class="key-btn" onclick="insertKey('5')">5</button>
+            <button class="key-btn" onclick="insertKey('6')">6</button>
+            <button class="key-btn key-op" onclick="insertKey('*')">×</button>
+            <button class="key-btn key-op" onclick="insertKey('/')">÷</button>
+            
+            <button class="key-btn" onclick="insertKey('1')">1</button>
+            <button class="key-btn" onclick="insertKey('2')">2</button>
+            <button class="key-btn" onclick="insertKey('3')">3</button>
+            <button class="key-btn key-op" onclick="insertKey('+')">+</button>
+            <button class="key-btn key-op" onclick="insertKey('-')">-</button>
+            
+            <button class="key-btn" onclick="insertKey('0')">0</button>
+            <button class="key-btn" onclick="insertKey('.')">.</button>
+            <button class="key-btn key-var" onclick="insertKey('x')">x</button>
+            <button class="key-btn key-ac" style="grid-column: span 2;" onclick="clearAll()">AC (ล้าง)</button>
+
+            <button class="key-btn key-action" onclick="closeKeypad()">ตกลง (ซ่อนเครื่องมือ)</button>
+        </div>
+    </div>
+
+    <!-- Modal หน้าต่างสรุปสูตรลัด -->
+    <div id="cheat-sheet-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>💡 สรุปสูตรอนุพันธ์พื้นฐาน (Cheat Sheet)</h3>
+                <button class="keypad-close" style="color:var(--text-dark);" onclick="closeCheatSheet()">✖</button>
+            </div>
+            <div class="modal-body">
+                <div class="formula-item">
+                    <div class="formula-title">1. กฎกำลัง (Power Rule)</div>
+                    <div class="formula-math">d/dx (x^n) = n · x^(n-1)</div>
+                </div>
+                <div class="formula-item">
+                    <div class="formula-title">2. อนุพันธ์ของค่าคงที่</div>
+                    <div class="formula-math">d/dx (c) = 0</div>
+                </div>
+                <div class="formula-item">
+                    <div class="formula-title">3. ฟังก์ชันตรีโกณมิติ</div>
+                    <div class="formula-math">d/dx (sin x) = cos x , &nbsp; d/dx (cos x) = -sin x</div>
+                </div>
+                <div class="formula-item">
+                    <div class="formula-title">4. ฟังก์ชันเอ็กซ์โพเนนเชียล</div>
+                    <div class="formula-math">d/dx (e^x) = e^x</div>
+                </div>
+                <div class="formula-item">
+                    <div class="formula-title">5. กฎลูกโซ่ (Chain Rule)</div>
+                    <div class="formula-math">d/dx (f(g(x))) = f'(g(x)) · g'(x)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var elt = document.getElementById('calculator');
+        var calculator = null;
+        let isDerivVisible = false;
+        let isSecDerivVisible = false;
+        let isTraceActive = false;
+        let animInterval = null;
+
+        const explanations = {
+            "1": "<b>ความชันแบบ Color-coded:</b> สังเกตพิกัด Y และสีของเส้นสัมผัสที่บ่งบอกทิศทาง <br><span style='color:#059669;'>■ สีเขียว</span> = ฟังก์ชันเพิ่ม <br><span style='color:#dc2626;'>■ สีแดง</span> = ฟังก์ชันลด <br><span style='color:#d97706;'>■ สีเหลืองทอง</span> = จุดวกกลับ (ความชัน = 0)",
+            "2": "<b>นิยามจากลิมิต:</b> เส้น<span style='color:#8b5cf6; font-weight:600;'>สีม่วง</span>คือเส้นตัดโค้ง เมื่อเลื่อนค่า <b>h</b> ให้เข้าใกล้ 0 ตัวเลขในกล่องสูตร <b>[Δy / Δx]</b> จะลู่เข้าหาค่าอนุพันธ์ (ความชันเส้นสัมผัส) ในที่สุด",
+            "3": "<b>อัตราการเปลี่ยนแปลง (ฟิสิกส์):</b> ความชันของเส้นสัมผัสคือ <b>'ความเร็วขณะใดขณะหนึ่ง'</b> ของวัตถุ และเส้นลูกศรสีม่วงบนกราฟจะแสดงเวกเตอร์ทิศทางและความเร็วของวัตถุ",
+            "4": "<b>อนุพันธ์ฟังก์ชันพื้นฐาน:</b> สังเกต <b>'ตารางข้อมูล'</b> ด้านบน เพื่อเปรียบเทียบค่าฟังก์ชัน (y) และความชัน (f') ณ จุดเดียวกันแบบเรียลไทม์",
+            "5": "<b>การประยุกต์หาจุดสูงสุด/ต่ำสุด:</b> จุดที่อนุพันธ์อันดับแรก f'(x)=0 คือจุดวกกลับ และใช้ <b>'อนุพันธ์อันดับสอง f''(x)'</b> เช็กความเว้า ถ้า >0 เป็นจุดต่ำสุด ถ้า <0 เป็นจุดสูงสุด"
+        };
+
+        let yHelper = null;
+
+        function initDesmos() {
+            if (!calculator) {
+                calculator = Desmos.GraphingCalculator(elt, { 
+                    keypad: false, 
+                    expressions: false, 
+                    settingsMenu: false,
+                    zoomButtons: true,
+                    lockViewport: false
+                });
+            }
+
+            let savedFunc = localStorage.getItem('saved_derivative_func');
+            if (savedFunc) {
+                document.getElementById('func-input').value = savedFunc;
+            }
+
+            let funcStr = document.getElementById('func-input').value;
+            
+            calculator.setExpressions([
+                { id: 'func', latex: "f(x) = " + funcStr, color: '#2563eb', lineStyle: Desmos.Styles.SOLID, secret: true },
+                { id: 'var_a', latex: "a = 1.5", sliderBounds: { min: -10, max: 10, step: 0.01 }, secret: false },
+                { id: 'var_h', latex: "h = 2", secret: true },
+                { id: 'pt_a', latex: "(a, f(a))", color: '#0f172a', showLabel: true, label: "จุดที่สนใจ (ลากได้)", dragMode: Desmos.DragModes.X },
+                { id: 'pt_h', latex: "(a+h, f(a+h))", color: '#8b5cf6', hidden: true, secret: true },
+                { id: 'tangent', latex: "y = f'(a)(x - a) + f(a)", color: '#059669', lineStyle: Desmos.Styles.SOLID, secret: true },
+                { id: 'secant', latex: "y = \\frac{f(a+h)-f(a)}{h}(x - a) + f(a)", color: '#8b5cf6', lineStyle: Desmos.Styles.DASHED, hidden: true, secret: true },
+                { id: 'deriv', latex: "g(x) = f'(x)", color: '#94a3b8', lineStyle: Desmos.Styles.DASHED, hidden: true, secret: true },
+                { id: 'sec_deriv', latex: "k(x) = f''(x)", color: '#f59e0b', lineStyle: Desmos.Styles.DOTTED, hidden: true, secret: true },
+                { id: 'physics_vector', latex: "polygon((a, f(a)), (a + f'(a)/5, f(a)))", color: '#9333ea', hidden: true, secret: true },
+                { id: 'trace_lines', latex: "y = f'(t)(x - t) + f(t)", color: '#34d399', lineStyle: Desmos.Styles.DASHED, hidden: true, secret: true }
+            ]);
+
+            yHelper = calculator.HelperExpression({ latex: "f(a)" });
+            let slopeHelper = calculator.HelperExpression({ latex: "f'(a)" });
+            let secDerivHelper = calculator.HelperExpression({ latex: "f''(a)" });
+            let limitValHelper = calculator.HelperExpression({ latex: "\\frac{f(a+h)-f(a)}{h}" });
+
+            calculator.observe('expression', function() {
+                let exprs = calculator.getExpressions();
+                let aExpr = exprs.find(ex => ex.id === 'var_a');
+                if (aExpr && aExpr.latex) {
+                    let parts = aExpr.latex.split('=');
+                    if (parts.length > 1) {
+                        let val = parseFloat(parts[1]);
+                        if (!isNaN(val)) {
+                            let slider = document.getElementById('slider-a');
+                            if (slider && Math.abs(parseFloat(slider.value) - val) > 0.001) {
+                                slider.value = val;
+                                document.getElementById('disp-x').innerText = val.toFixed(2);
+                            }
+                        }
+                    }
+                }
+            });
+
+            function updateAllDashboardData() {
+                updateUIBasedOnValues(
+                    yHelper.numericValue, 
+                    slopeHelper.numericValue, 
+                    secDerivHelper.numericValue,
+                    limitValHelper.numericValue
+                );
+            }
+
+            yHelper.observe('numericValue', updateAllDashboardData);
+            slopeHelper.observe('numericValue', updateAllDashboardData);
+            secDerivHelper.observe('numericValue', updateAllDashboardData);
+            limitValHelper.observe('numericValue', updateAllDashboardData);
+
+            updateDesmosEquations();
+        }
+
+        function updateUIBasedOnValues(yVal, slope, secDeriv, limitVal) {
+            let a = document.getElementById('slider-a').value;
+            let h = document.getElementById('slider-h').value;
+            let topic = document.getElementById('topic-select').value;
+            
+            document.getElementById('disp-x').innerText = parseFloat(a).toFixed(2);
+            if (!isNaN(yVal)) {
+                document.getElementById('disp-y').innerText = yVal.toFixed(2);
+                document.getElementById('tbl-x').innerText = parseFloat(a).toFixed(2);
+                document.getElementById('tbl-y').innerText = yVal.toFixed(2);
+            }
+
+            if (isNaN(slope) || !isFinite(slope)) return;
+            
+            let color = '#059669'; 
+            let bgColor = '#ecfdf5';
+            let slopeValEl = document.getElementById('slope-value');
+            let statusCard = document.getElementById('status-card');
+            
+            if (Math.abs(slope) < 0.05) {
+                color = '#d97706'; 
+                bgColor = '#fffbeb';
+                slope = 0;
+            } else if (slope < 0) {
+                color = '#dc2626'; 
+                bgColor = '#fef2f2';
+            }
+
+            slopeValEl.innerText = slope.toFixed(2);
+            slopeValEl.style.color = color;
+            statusCard.style.borderColor = color;
+            statusCard.style.backgroundColor = bgColor;
+            statusCard.style.borderTopWidth = "4px"; 
+            document.getElementById('tbl-dy').innerText = slope.toFixed(2);
+            document.getElementById('tbl-dy').style.color = color;
+
+            calculator.setExpression({ id: 'tangent', color: color });
+
+            if (topic === '2' && !isNaN(limitVal)) {
+                let limitText = document.getElementById('limit-formula-text');
+                limitText.innerHTML = `[ f(${parseFloat(a)+parseFloat(h)}) - f(${a}) ] / ${h} <br> = <span style="font-size: 14px; color: #9333ea;">${limitVal.toFixed(3)}</span>`;
+            }
+
+            if (topic === '5') {
+                let gameBox = document.getElementById('gamification-box');
+                let concavityBox = document.getElementById('concavity-box');
+                
+                if (Math.abs(slope) === 0) {
+                    let pointType = "";
+                    if (secDeriv > 0) pointType = "(จุดต่ำสุดสัมพัทธ์)";
+                    else if (secDeriv < 0) pointType = "(จุดสูงสุดสัมพัทธ์)";
+                    
+                    gameBox.innerHTML = `🎉 จุดวิกฤต ${pointType} (y = ${yVal.toFixed(2)})`;
+                    gameBox.className = "gamification-box success";
+                } else {
+                    gameBox.innerHTML = "🎯 ภารกิจ: เลื่อนจุด X เพื่อหาตำแหน่งที่ความชันเป็น 0";
+                    gameBox.className = "gamification-box pending";
+                }
+
+                if (!isNaN(secDeriv)) {
+                    if (secDeriv > 0.05) {
+                        concavityBox.innerHTML = `f''(x) = ${secDeriv.toFixed(2)} > 0 (เว้าหงาย ∪)`;
+                        concavityBox.className = "concavity-indicator concavity-up";
+                    } else if (secDeriv < -0.05) {
+                        concavityBox.innerHTML = `f''(x) = ${secDeriv.toFixed(2)} < 0 (เว้าคว่ำ ∩)`;
+                        concavityBox.className = "concavity-indicator concavity-down";
+                    } else {
+                        concavityBox.innerHTML = `f''(x) = 0 (จุดเปลี่ยนความเว้า)`;
+                        concavityBox.className = "concavity-indicator concavity-zero";
+                    }
+                    concavityBox.style.display = "block";
+                }
+            }
+        }
+
+        function updateSliders() {
+            let a = document.getElementById('slider-a').value;
+            let h = document.getElementById('slider-h').value;
+            calculator.setExpression({ id: 'var_a', latex: "a = " + a });
+            calculator.setExpression({ id: 'var_h', latex: "h = " + h });
+        }
+
+        function updateFunctionAndSave() {
+            let funcStr = document.getElementById('func-input').value;
+            localStorage.setItem('saved_derivative_func', funcStr);
+            updateDesmosEquations();
+        }
+
+        function updateDesmosEquations() {
+            let funcStr = document.getElementById('func-input').value;
+            if(!funcStr.trim()) { funcStr = "0"; }
+            
+            calculator.setExpression({ id: 'func', latex: "f(x) = " + funcStr });
+
+            let derivDisplay = document.getElementById('deriv-eq-display');
+            try {
+                let derivedNode = math.derivative(funcStr, 'x');
+                let simplifiedNode = math.simplify(derivedNode);
+                let derivStr = simplifiedNode.toString();
+                derivStr = derivStr.replace(/\* /g, '').replace(/ \*/g, '').replace(/\*/g, '');
+                
+                derivDisplay.innerHTML = "สูตร f'(x) = " + derivStr;
+                derivDisplay.style.color = "#0369a1";
+            } catch (error) {
+                derivDisplay.innerHTML = "รอสมการที่ถูกต้อง (ตรวจสอบเครื่องหมาย)...";
+                derivDisplay.style.color = "#ef4444";
+            }
+        }
+
+        function setFunction(funcString) {
+            let input = document.getElementById('func-input');
+            input.value = funcString;
+            input.focus();
+            updateFunctionAndSave();
+            resetCalculatorView();
+        }
+
+        function toggleDerivGraph() {
+            isDerivVisible = !isDerivVisible;
+            calculator.setExpression({ id: 'deriv', hidden: !isDerivVisible });
+            let text = document.getElementById('deriv-text');
+            if(isDerivVisible) { text.innerText = "ซ่อน f'(x)"; } else { text.innerText = "กราฟ f'(x)"; }
+        }
+
+        function toggleSecondDerivGraph() {
+            isSecDerivVisible = !isSecDerivVisible;
+            calculator.setExpression({ id: 'sec_deriv', hidden: !isSecDerivVisible });
+            let text = document.getElementById('sec-deriv-text');
+            if(isSecDerivVisible) { text.innerText = "ซ่อน f''(x)"; } else { text.innerText = "กราฟ f''(x)"; }
+        }
+
+        function toggleTraceMode() {
+            isTraceActive = !isTraceActive;
+            let btn = document.getElementById('trace-btn');
+            if (isTraceActive) {
+                btn.classList.add('active');
+                btn.innerText = "✨ ปิดร่องรอย";
+                calculator.setExpression({ id: 'trace_lines', latex: "y = f'(t)(x - t) + f(t)", hidden: false, parameters: { t: { min: -5, max: 5, step: 0.5 } } });
+            } else {
+                btn.classList.remove('active');
+                btn.innerText = "✨ ร่องรอย";
+                calculator.setExpression({ id: 'trace_lines', hidden: true });
+            }
+        }
+
+        let currentQuizAnswer = "";
+        let quizHistoryLog = [];
+
+        function toggleQuizMode() {
+            let stdControls = document.getElementById('standard-controls');
+            let quizPanel = document.getElementById('quiz-panel');
+            let btn = document.getElementById('quiz-mode-btn');
+
+            if (quizPanel.style.display === 'flex') {
+                quizPanel.style.display = 'none';
+                stdControls.style.display = 'flex';
+                btn.classList.remove('active');
+            } else {
+                quizPanel.style.display = 'flex';
+                stdControls.style.display = 'none';
+                btn.classList.add('active');
+                generateQuizQuestion();
+            }
+        }
+
+        // ระบบเชื่อมต่อ OpenRouter API ที่ผูกค่าหัวข้อและระดับความยากแบบ 100%
+        async function generateQuizQuestion() {
+            let topic = document.getElementById('quiz-topic').value;
+            let difficulty = document.getElementById('quiz-difficulty').value;
+            let apiKey = document.getElementById('ai-api-key').value.trim();
+            let qTextEl = document.getElementById('quiz-question-text');
+            let feedbackEl = document.getElementById('quiz-feedback-text');
+            feedbackEl.innerText = "";
+            document.getElementById('quiz-user-ans').value = "";
+
+            qTextEl.innerText = `🤖 กำลังสุ่มโจทย์ [${topic}] ระดับ [${difficulty}] ผ่าน AI...`;
+
+            try {
+                let response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: "google/gemini-2.5-flash",
+                        messages: [{ 
+                            role: "user", 
+                            content: `คุณคือผู้เชี่ยวชาญวิชาแคลคูลัส จงสร้างโจทย์คำถามเกี่ยวกับอนุพันธ์ ในหัวข้อเฉพาะ "${topic}" ระดับความยาก "${difficulty}" จำนวน 1 ข้อ โดยขอโจทย์ใหม่ที่สร้างสรรค์และไม่ซ้ำใคร พร้อมระบุเฉลยคำตอบสั้นๆ (เช่น 12x^2 หรือ cos(x)) เป็นภาษาไทย ตอบกลับมาในรูปแบบ JSON ล้วนๆ เท่านั้น ห้ามมีข้อความอื่นหรือ Markdown: {"question": "...", "answer": "..."}` 
+                        }]
+                    })
+                });
+                let data = await response.json();
+                let rawContent = data.choices[0].message.content;
+                rawContent = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();
+                let content = JSON.parse(rawContent);
+                
+                qTextEl.innerText = content.question;
+                currentQuizAnswer = content.answer.replace(/\s+/g, '');
+                return;
+            } catch(e) {
+                console.log("API Error, falling back to smart local bank", e);
+            }
+
+            // ระบบสำรองอัจฉริยะ (Smart Fallback Bank) แยกตามหัวข้อและระดับความยาก
+            let sampleBank = {
+                "กฎกำลังและค่าคงที่": {
+                    "ง่าย": { q: "จงหาอนุพันธ์ของ f(x) = 3x^2 - 5x + 7", ans: "6x-5" },
+                    "ปานกลาง": { q: "จงหาอนุพันธ์ของ f(x) = 5x^4 - 2x^3 + 8x", ans: "20x^3-6x^2+8" },
+                    "ยาก": { q: "จงหาอนุพันธ์ของ f(x) = (7x^3 - 4x) / x", ans: "14x" }
+                },
+                "กฎผลคูณและผลหาร": {
+                    "ง่าย": { q: "จงหาอนุพันธ์ของ f(x) = x * sin(x)", ans: "sin(x)+x*cos(x)" },
+                    "ปานกลาง": { q: "จงหาอนุพันธ์ของ f(x) = x^2 * cos(x)", ans: "2x*cos(x)-x^2*sin(x)" },
+                    "ยาก": { q: "จงหาอนุพันธ์ของ f(x) = (x^2 + 1) / (x - 1)", ans: "(x^2-2x-1)/(x-1)^2" }
+                },
+                "กฎลูกโซ่": {
+                    "ง่าย": { q: "จงหาอนุพันธ์ของ f(x) = (2x + 3)^4", ans: "8(2x+3)^3" },
+                    "ปานกลาง": { q: "จงหาอนุพันธ์ของ f(x) = (4x^2 + 3)^3", ans: "24x(4x^2+3)^2" },
+                    "ยาก": { q: "จงหาอนุพันธ์ของ f(x) = sin(3x^2 + 1)", ans: "6x*cos(3x^2+1)" }
+                },
+                "ฟังก์ชันตรีโกณมิติ": {
+                    "ง่าย": { q: "จงหาอนุพันธ์ของ f(x) = 2*sin(x)", ans: "2*cos(x)" },
+                    "ปานกลาง": { q: "จงหาอนุพันธ์ของ f(x) = 4*sin(x) + tan(x)", ans: "4*cos(x)+sec(x)^2" },
+                    "ยาก": { q: "จงหาอนุพันธ์ของ f(x) = sin(x) / cos(x)", ans: "sec(x)^2" }
+                },
+                "ฟังก์ชันเอ็กซ์โพเนนเชียลและลอการิทึม": {
+                    "ง่าย": { q: "จงหาอนุพันธ์ของ f(x) = e^x + ln(x)", ans: "e^x+1/x" },
+                    "ปานกลาง": { q: "จงหาอนุพันธ์ของ f(x) = e^(3x)", ans: "3*e^(3x)" },
+                    "ยาก": { q: "จงหาอนุพันธ์ของ f(x) = x * e^(2x)", ans: "e^(2x)+2x*e^(2x)" }
+                },
+                "อนุพันธ์อันดับสูง": {
+                    "ง่าย": { q: "จงหาอนุพันธ์อันดับที่สองของ f(x) = 5x^3", ans: "30x" },
+                    "ปานกลาง": { q: "จงหาอนุพันธ์อันดับที่สองของ f(x) = x^4 - 2x^2", ans: "12x^2-4" },
+                    "ยาก": { q: "จงหาอนุพันธ์อันดับที่สามของ f(x) = sin(2x)", ans: "-8*cos(2x)" }
+                },
+                "การประยุกต์ความชันและเส้นสัมผัส": {
+                    "ง่าย": { q: "จงหาความชันของเส้นโค้ง f(x) = x^2 ที่จุด x = 3", ans: "6" },
+                    "ปานกลาง": { q: "จงหาความชันของเส้นโค้ง f(x) = x^3 ที่จุด x = 2", ans: "12" },
+                    "ยาก": { q: "จงหาความชันของเส้นโค้ง f(x) = x^3 - 3x ที่จุด x = 1", ans: "0" }
+                },
+                "การประยุกต์หาค่าสูงสุดและต่ำสุด": {
+                    "ง่าย": { q: "จงหาค่าวิกฤต (จุดที่ f'(x)=0) ของ f(x) = x^2 - 4x", ans: "2" },
+                    "ปานกลาง": { q: "จงหาค่าวิกฤต (จุดที่ f'(x)=0) ของ f(x) = x^2 - 6x + 8", ans: "3" },
+                    "ยาก": { q: "จงหาจุดวิกฤตทั้งหมดของ f(x) = x^3 - 3x", ans: "1,-1" }
+                }
+            };
+
+            let topicBank = sampleBank[topic] || sampleBank["กฎกำลังและค่าคงที่"];
+            let selected = topicBank[difficulty] || topicBank["ปานกลาง"];
+            qTextEl.innerText = `[ระบบสุ่มสำรอง] ${selected.q}`;
+            currentQuizAnswer = selected.ans.replace(/\s+/g, '');
+        }
+
+        function checkQuizAnswer() {
+            let userAns = document.getElementById('quiz-user-ans').value.replace(/\s+/g, '');
+            let feedbackEl = document.getElementById('quiz-feedback-text');
+            let qText = document.getElementById('quiz-question-text').innerText;
+            let topic = document.getElementById('quiz-topic').value;
+            let diff = document.getElementById('quiz-difficulty').value;
+
+            if (!userAns) {
+                feedbackEl.style.color = "var(--danger)";
+                feedbackEl.innerText = "⚠️ กรุณากรอกคำตอบก่อนส่ง";
+                return;
+            }
+
+            let isCorrect = (userAns.toLowerCase() === currentQuizAnswer.toLowerCase());
+            let resultStr = `[Quiz | ${topic} | ${diff}] โจทย์: ${qText} | ตอบ: ${userAns} -> ${isCorrect ? 'ถูกต้อง ✅' : 'ผิด ❌ (เฉลย: ' + currentQuizAnswer + ')'}`;
+            quizHistoryLog.push(resultStr);
+
+            let noteArea = document.getElementById('student-note');
+            noteArea.value = quizHistoryLog.join('\n');
+
+            if (isCorrect) {
+                feedbackEl.style.color = "var(--success)";
+                feedbackEl.innerText = "🎉 ถูกต้องยอดเยี่ยม! บันทึกลงรายงานแล้ว";
+            } else {
+                feedbackEl.style.color = "var(--danger)";
+                feedbackEl.innerText = `❌ ยังไม่ถูกต้อง (คำตอบ: ${currentQuizAnswer}) บันทึกลงรายงานแล้ว`;
+            }
+        }
+
+        function zoomInOnPoint() {
+            if (calculator) {
+                let aVal = parseFloat(document.getElementById('slider-a').value);
+                let yVal = yHelper ? yHelper.numericValue : 0;
+                if (isNaN(yVal)) yVal = 0;
+
+                calculator.setMathBounds({
+                    left: aVal - 1.5,
+                    right: aVal + 1.5,
+                    bottom: yVal - 1.5,
+                    top: yVal + 1.5
+                });
+            }
+        }
+
+        function resetCalculatorView() {
+            if (calculator) {
+                calculator.setMathBounds({ left: -5, right: 5, bottom: -5, top: 5 });
+            }
+        }
+
+        function exportReflection() {
+            let stdName = document.getElementById('std-name').value.trim();
+            let stdClass = document.getElementById('std-class-no').value.trim();
+            let func = document.getElementById('func-input').value;
+            let xVal = document.getElementById('disp-x').innerText;
+            let yVal = document.getElementById('disp-y').innerText;
+            let slope = document.getElementById('slope-value').innerText;
+            let note = document.getElementById('student-note').value;
+
+            let reportContent = `========================================\n`;
+            reportContent += `  รายงานผลการสำรวจอนุพันธ์และ Quiz (Calculus Lab)\n`;
+            reportContent += `========================================\n\n`;
+            reportContent += `ชื่อ-นามสกุล: ${stdName ? stdName : '(ไม่ได้ระบุ)'}\n`;
+            reportContent += `ชั้น / เลขที่: ${stdClass ? stdClass : '(ไม่ได้ระบุ)'}\n\n`;
+            reportContent += `ฟังก์ชัน f(x) ล่าสุด: ${func}\n`;
+            reportContent += `พิกัด X ที่พิจารณา: ${xVal}\n`;
+            reportContent += `พิกัด Y (ค่าฟังก์ชัน): ${yVal}\n`;
+            reportContent += `ค่าอนุพันธ์ (ความชัน f'): ${slope}\n\n`;
+            reportContent += `บันทึกข้อสังเกตและประวัติการทำ Quiz:\n`;
+            reportContent += `${note ? note : '(ไม่มีบันทึก)'}\n\n`;
+            reportContent += `========================================\n`;
+
+            let blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = `Calculus_Report_${stdName ? stdName.replace(/\s+/g, '_') : 'Student'}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            let isDark = document.body.classList.contains('dark-mode');
+            document.getElementById('dark-mode-btn').innerText = isDark ? "☀️ สว่าง" : "🌙 โหมดคืน";
+        }
+
+        function togglePanel() {
+            let layout = document.getElementById('main-layout');
+            let btn = document.getElementById('toggle-panel-btn');
+            layout.classList.toggle('panel-collapsed');
+            let isCollapsed = layout.classList.contains('panel-collapsed');
+            btn.innerText = isCollapsed ? "▶ เมนู" : "◀ ซ่อนเมนู";
+        }
+
+        function openCheatSheet() { document.getElementById('cheat-sheet-modal').style.display = 'flex'; }
+        function closeCheatSheet() { document.getElementById('cheat-sheet-modal').style.display = 'none'; }
+
+        function toggleAnimation() {
+            let btn = document.getElementById('play-btn');
+            if (animInterval) {
+                clearInterval(animInterval);
+                animInterval = null;
+                btn.innerHTML = "▶ เล่น";
+                btn.classList.remove('btn-danger');
+                btn.classList.add('btn-play');
+            } else {
+                btn.innerHTML = "⏸ หยุด";
+                btn.classList.remove('btn-play');
+                btn.classList.add('btn-danger');
+                let sliderA = document.getElementById('slider-a');
+                let a = parseFloat(sliderA.value);
+                let direction = 1;
+                
+                animInterval = setInterval(() => {
+                    a += (0.02 * direction);
+                    if (a > 3) { a = -3; } 
+                    sliderA.value = a;
+                    updateSliders();
+                }, 30);
+            }
+        }
+
+        function changeTopic() {
+            let topic = document.getElementById('topic-select').value;
+            
+            document.getElementById('exp-box').innerHTML = explanations[topic];
+            document.getElementById('h-container').style.display = 'none';
+            document.getElementById('limit-display').style.display = 'none';
+            document.getElementById('gamification-box').style.display = 'none';
+            document.getElementById('concavity-box').style.display = 'none';
+            document.getElementById('data-table-box').style.display = 'none';
+            document.getElementById('btn-sec-deriv').style.display = 'none';
+            document.getElementById('status-label').innerText = "ค่าอนุพันธ์อันดับแรก f'(x) (ความชัน)";
+            
+            calculator.setExpression({ id: 'secant', hidden: true });
+            calculator.setExpression({ id: 'pt_h', hidden: true });
+            calculator.setExpression({ id: 'physics_vector', hidden: true });
+            calculator.updateSettings({ xAxisLabel: '', yAxisLabel: '' }); 
+
+            if(isDerivVisible && topic !== '4') { toggleDerivGraph(); }
+            if(isSecDerivVisible) { toggleSecondDerivGraph(); }
+
+            if (topic === '2') {
+                document.getElementById('h-container').style.display = 'flex';
+                document.getElementById('limit-display').style.display = 'block';
+                calculator.setExpression({ id: 'secant', hidden: false });
+                calculator.setExpression({ id: 'pt_h', hidden: false });
+            } 
+            else if (topic === '3') {
+                document.getElementById('status-label').innerText = "ความเร็ว (v) ขณะใดขณะหนึ่ง";
+                calculator.updateSettings({ xAxisLabel: 'เวลา (วินาที)', yAxisLabel: 'ระยะทาง (เมตร)' });
+                calculator.setExpression({ id: 'physics_vector', hidden: false });
+                setFunction("-x^2 + 4");
+            }
+            else if (topic === '4') {
+                document.getElementById('data-table-box').style.display = 'block';
+                setFunction("sin(x)");
+                if(!isDerivVisible) toggleDerivGraph();
+            }
+            else if (topic === '5') {
+                document.getElementById('gamification-box').style.display = 'block';
+                document.getElementById('concavity-box').style.display = 'block';
+                document.getElementById('btn-sec-deriv').style.display = 'flex'; 
+                setFunction("x^3 - 3x");
+                let a = document.getElementById('slider-a').value;
+                calculator.setExpression({ id: 'var_a', latex: "a = " + a });
+            }
+            else {
+                setFunction("0.5x^3 - 2x");
+            }
+            
+            resetCalculatorView();
+        }
+
+        const keypad = document.getElementById('virtual-keypad');
+        const funcInput = document.getElementById('func-input');
+
+        function openKeypad() { keypad.style.display = 'flex'; }
+        function closeKeypad() { keypad.style.display = 'none'; }
+
+        function insertKey(char) {
+            let start = funcInput.selectionStart;
+            let end = funcInput.selectionEnd;
+            let text = funcInput.value;
+            funcInput.value = text.substring(0, start) + char + text.substring(end);
+            funcInput.focus();
+            funcInput.selectionStart = funcInput.selectionEnd = start + char.length;
+            updateFunctionAndSave();
+        }
+
+        function deleteKey() {
+            let start = funcInput.selectionStart;
+            let end = funcInput.selectionEnd;
+            let text = funcInput.value;
+            if (start === end && start > 0) {
+                funcInput.value = text.substring(0, start - 1) + text.substring(end);
+                funcInput.focus();
+                funcInput.selectionStart = funcInput.selectionEnd = start - 1;
+            } else if (start !== end) {
+                funcInput.value = text.substring(0, start) + text.substring(end);
+                funcInput.focus();
+                funcInput.selectionStart = funcInput.selectionEnd = start;
+            }
+            updateFunctionAndSave();
+        }
+        
+        function clearAll() {
+            funcInput.value = "";
+            funcInput.focus();
+            updateFunctionAndSave();
+        }
+
+        const keypadHeader = document.getElementById('keypad-header');
+        let isDragging = false;
+        let currentX, currentY, initialX, initialY;
+        let xOffset = 0, yOffset = 0;
+
+        keypadHeader.addEventListener("mousedown", dragStart);
+        document.addEventListener("mouseup", dragEnd);
+        document.addEventListener("mousemove", drag);
+
+        keypadHeader.addEventListener("touchstart", dragStart, {passive: false});
+        document.addEventListener("touchend", dragEnd, {passive: false});
+        document.addEventListener("touchmove", drag, {passive: false});
+
+        function dragStart(e) {
+            initialX = e.type === "touchstart" ? e.touches[0].clientX - xOffset : e.clientX - xOffset;
+            initialY = e.type === "touchstart" ? e.touches[0].clientY - yOffset : e.clientY - yOffset;
+            if (e.target === keypadHeader || e.target.parentNode === keypadHeader) { isDragging = true; }
+        }
+
+        function dragEnd(e) {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.type === "touchmove" ? e.touches[0].clientX - initialX : e.clientX - initialX;
+                currentY = e.type === "touchmove" ? e.touches[0].clientY - initialY : e.clientY - initialY;
+                xOffset = currentX;
+                yOffset = currentY;
+                keypad.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initDesmos();
+            resetCalculatorView();
+        });
+    </script>
+</body>
+</html>
