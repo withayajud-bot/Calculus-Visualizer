@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Derivatives - เรียนรู้อนุพันธ์แบบเห็นภาพ</title>
+    <title>Calculus Visualizer - ระบบสำรวจอนุพันธ์อัจฉริยะ</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://www.desmos.com/api/v1.9/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
@@ -266,7 +266,7 @@
 
     <div class="header">
         <div class="header-left">
-            <h1>การสำรวจอนุพันธ์ (Derivatives Explorer)</h1>
+            <h1>Calculus Visualizer</h1>
             <p>ระบบสื่อการเรียนรู้คณิตศาสตร์อัจฉริยะ (Masterpiece Edition)</p>
         </div>
         <div class="header-right">
@@ -281,7 +281,7 @@
         <div class="control-panel">
             <!-- ข้อมูลส่วนตัวนักเรียนสำหรับรายงาน -->
             <div class="student-info-box">
-                <div class="student-info-title">👤 ข้อมูลผู้จัดทำ / ผู้ทำแบบทดสอบ</div>
+                <div class="student-info-title">👤 ข้อมูลผู้ทำแบบทดสอบ</div>
                 <div class="student-row">
                     <input type="text" id="std-name" placeholder="ชื่อ - นามสกุล">
                     <input type="text" id="std-class-no" placeholder="ชั้น / เลขที่">
@@ -392,7 +392,7 @@
                 </div>
             </div>
 
-            <!-- แผงโหมด Quiz อัจฉริยะ (เชื่อมต่อ OpenRouter API เต็มรูปแบบตามที่เลือก) -->
+            <!-- แผงโหมด Quiz อัจฉริยะ (เชื่อมต่อ OpenRouter API Full Support) -->
             <div id="quiz-panel">
                 <div class="quiz-title">
                     <span>🎯 ระบบทดสอบ Quiz อนุมัติโดย AI</span>
@@ -787,7 +787,7 @@
             }
         }
 
-        // ระบบเชื่อมต่อ OpenRouter API ที่ผูกค่าหัวข้อและระดับความยากแบบ 100%
+        // ระบบเชื่อมต่อ OpenRouter API ที่ผูกค่าหัวข้อและระดับความยากแบบสมบูรณ์
         async function generateQuizQuestion() {
             let topic = document.getElementById('quiz-topic').value;
             let difficulty = document.getElementById('quiz-difficulty').value;
@@ -797,7 +797,7 @@
             feedbackEl.innerText = "";
             document.getElementById('quiz-user-ans').value = "";
 
-            qTextEl.innerText = `🤖 กำลังสุ่มโจทย์ [${topic}] ระดับ [${difficulty}] ผ่าน AI...`;
+            qTextEl.innerText = `🤖 กำลังสุ่มโจทย์หัวข้อ [${topic}] ระดับ [${difficulty}] ผ่าน AI...`;
 
             try {
                 let response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
